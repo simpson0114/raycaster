@@ -2,12 +2,14 @@
 
 #include "raycaster_float.h"
 #include <math.h>
+#include <stdio.h>
 
 bool RayCasterFloat::IsWall(float rayX, float rayY)
 {
     float mapX = 0;
     float mapY = 0;
-    float offsetX = modff(rayX, &mapX);
+    float offsetX = modff(
+        rayX, &mapX);  // cut float(ray) into  decimal(offset) and integer(&map)
     float offsetY = modff(rayY, &mapY);
     int tileX = static_cast<int>(mapX);
     int tileY = static_cast<int>(mapY);
@@ -16,7 +18,7 @@ bool RayCasterFloat::IsWall(float rayX, float rayY)
         return true;
     }
     return g_map[(tileX >> 3) + (tileY << (MAP_XS - 3))] &
-           (1 << (8 - (tileX & 0x7)));
+           (1 << (7 - (tileX & 0x7)));
 }
 
 float RayCasterFloat::Distance(float playerX,
@@ -53,30 +55,15 @@ float RayCasterFloat::Distance(float playerX,
         startDeltaX = (1 - offsetY) * tan(rayA);
         startDeltaY = (1 - offsetX) / tan(rayA);
     } else if (rayA <= M_PI) {
-        if (offsetY == 0) {
-            startDeltaX = (1) * fabs(tan(rayA));
-        } else {
-            startDeltaX = (offsetY) *fabs(tan(rayA));
-        }
+        startDeltaX = (offsetY) *fabs(tan(rayA));
         startDeltaY = -(1 - offsetX) / fabs(tan(rayA));
     } else if (rayA < 3 * M_PI_2) {
-        if (offsetY == 0) {
-            startDeltaX = -(1) * fabs(tan(rayA));
-        } else {
-            startDeltaX = -(offsetY) *fabs(tan(rayA));
-        }
-        if (offsetX == 0) {
-            startDeltaY = -(1) / fabs(tan(rayA));
-        } else {
-            startDeltaY = -(offsetX) / fabs(tan(rayA));
-        }
+        startDeltaX = -(offsetY) *fabs(tan(rayA));
+        startDeltaY = -(offsetX) / fabs(tan(rayA));
+
     } else {
         startDeltaX = -(1 - offsetY) * fabs(tan(rayA));
-        if (offsetX == 0) {
-            startDeltaY = (1) / fabs(tan(rayA));
-        } else {
-            startDeltaY = (offsetX) / fabs(tan(rayA));
-        }
+        startDeltaY = (offsetX) / fabs(tan(rayA));
     }
 
     float interceptX = rayX + startDeltaX;
@@ -148,13 +135,15 @@ void RayCasterFloat::Trace(uint16_t screenX,
     *textureY = 0;
     *textureStep = 0;
     if (distance > 0) {
-        *screenY = INV_FACTOR / distance;
-        auto txs = (*screenY * 2.0f);
+        float tmp = INV_FACTOR / distance;
+        *screenY = tmp;
+        auto txs = (tmp * 2.0f);
         if (txs != 0) {
             *textureStep = (256 / txs) * 256;
             if (txs > SCREEN_HEIGHT) {
                 auto wallHeight = (txs - SCREEN_HEIGHT) / 2;
                 *textureY = wallHeight * (256 / txs) * 256;
+                *screenY = HORIZON_HEIGHT;
             }
         }
     } else {
